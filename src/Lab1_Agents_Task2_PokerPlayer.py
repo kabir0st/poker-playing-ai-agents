@@ -104,5 +104,3 @@ print(analyse_hand(example_hand1))
 # phase 2:   Showdown   #
 #########################
 
-
-w
