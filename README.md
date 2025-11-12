@@ -79,6 +79,7 @@ Comprehensive documentation is available in the [`documentation/`](documentation
 - **[Quick Reference](documentation/QUICK_REFERENCE.md)** - Quick lookup guide for agents and statistics
 
 ### Detailed Guides
+- **[Agent Architecture](documentation/AGENTS.md)** - Complete guide to all agent types, their creation, decision-making processes, and flow diagrams
 - **[Game Structure](documentation/GAME_STRUCTURE.md)** - Complete game rules, hand types, scoring system, and game flow
 - **[Code Flow](documentation/CODE_FLOW.md)** - Detailed architecture, data structures, component interactions, and execution flow
 - **[Flow Diagrams](documentation/FLOW_DIAGRAMS.md)** - Visual Mermaid flowcharts for each lab experiment (Lab 2d, 2e, 2f)
