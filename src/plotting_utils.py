@@ -7,49 +7,6 @@ import matplotlib.ticker as ticker
 import numpy as np
 
 
-def plot_cumulative_differences(results, output_dir, filename_prefix):
-    """
-    Plot cumulative bankroll differences over games.
-
-    Parameters
-    ----------
-    results : dict
-        Results dictionary from run_experiment
-    output_dir : str
-        Directory to save plots
-    filename_prefix : str
-        Prefix for filename
-    """
-    differences = results['differences']
-    agent1_name = results['agent1_name']
-    agent2_name = results['agent2_name']
-
-    cumulative = np.cumsum(differences)
-    games = range(1, len(differences) + 1)
-
-    plt.figure(figsize=(12, 6))
-    plt.plot(games, cumulative, linewidth=2, color='steelblue',
-             label='Cumulative Difference')
-    plt.axhline(0, color='black', linestyle='-', linewidth=1, alpha=0.5)
-
-    plt.xlabel('Game Number', fontsize=12)
-    plt.ylabel(
-        f'Cumulative Difference ({agent1_name} - {agent2_name})',
-        fontsize=12)
-    plt.title(
-        f'Cumulative Bankroll Difference Over Games\n'
-        f'{agent1_name} vs {agent2_name}',
-        fontsize=14, fontweight='bold')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-
-    filepath = os.path.join(
-        output_dir, f'{filename_prefix}_cumulative_differences.png')
-    plt.savefig(filepath, dpi=300, bbox_inches='tight')
-    print(f"  Saved: {filepath}")
-
-
 def plot_winnings_after_x_games(results, output_dir, filename_prefix):
     """
     Plot cumulative winnings after different numbers of games.
@@ -78,19 +35,30 @@ def plot_winnings_after_x_games(results, output_dir, filename_prefix):
     games = np.arange(1, total_games + 1)
 
     plt.figure(figsize=(12, 6))
-    plt.plot(games, cumulative_agent1, linewidth=1.5,
-             label=agent1_name, alpha=0.8, color='steelblue')
-    plt.plot(games, cumulative_agent2, linewidth=1.5,
-             label=agent2_name, alpha=0.8, color='coral')
+    plt.plot(games,
+             cumulative_agent1,
+             linewidth=1.5,
+             label=agent1_name,
+             alpha=0.8,
+             color='steelblue')
+    plt.plot(games,
+             cumulative_agent2,
+             linewidth=1.5,
+             label=agent2_name,
+             alpha=0.8,
+             color='coral')
 
     plt.xlabel('Number of Games', fontsize=12)
     plt.ylabel('Cumulative Winnings', fontsize=12)
-    plt.title(f'Cumulative Winnings After X Games\n{agent1_name} vs {agent2_name}',
-              fontsize=14, fontweight='bold')
+    plt.title(
+        f'Cumulative Winnings After X Games\n{agent1_name} vs {agent2_name}',
+        fontsize=14,
+        fontweight='bold')
 
     # Format y-axis to show dollar signs
     ax = plt.gca()
-    ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+    ax.yaxis.set_major_formatter(
+        ticker.FuncFormatter(lambda x, p: f'${x:,.0f}'))
 
     plt.legend()
     plt.grid(True, alpha=0.3)
@@ -98,8 +66,8 @@ def plot_winnings_after_x_games(results, output_dir, filename_prefix):
 
     plt.tight_layout()
 
-    filepath = os.path.join(
-        output_dir, f'{filename_prefix}_winnings_after_x_games.png')
+    filepath = os.path.join(output_dir,
+                            f'{filename_prefix}_winnings_after_x_games.png')
     plt.savefig(filepath, dpi=300, bbox_inches='tight')
     print(f"  Saved: {filepath}")
 
@@ -137,7 +105,10 @@ def plot_win_rate_analysis(results, output_dir, filename_prefix):
     counts = [agent1_wins, agent2_wins, ties]
     colors = ['steelblue', 'coral', 'gray']
 
-    bars1 = ax1.bar(categories, counts, color=colors, alpha=0.7,
+    bars1 = ax1.bar(categories,
+                    counts,
+                    color=colors,
+                    alpha=0.7,
                     edgecolor='black')
     ax1.set_ylabel('Number of Games', fontsize=12)
     ax1.set_title('Win Counts', fontsize=13, fontweight='bold')
@@ -146,13 +117,20 @@ def plot_win_rate_analysis(results, output_dir, filename_prefix):
     # Add value labels
     for bar, count in zip(bars1, counts):
         height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
+        ax1.text(bar.get_x() + bar.get_width() / 2.,
+                 height,
                  f'{count}',
-                 ha='center', va='bottom', fontsize=11, fontweight='bold')
+                 ha='center',
+                 va='bottom',
+                 fontsize=11,
+                 fontweight='bold')
 
     # Win rates
     rates = [win_rate1, win_rate2, tie_rate]
-    bars2 = ax2.bar(categories, rates, color=colors, alpha=0.7,
+    bars2 = ax2.bar(categories,
+                    rates,
+                    color=colors,
+                    alpha=0.7,
                     edgecolor='black')
     ax2.set_ylabel('Win Rate (%)', fontsize=12)
     ax2.set_title('Win Rates', fontsize=13, fontweight='bold')
@@ -162,16 +140,22 @@ def plot_win_rate_analysis(results, output_dir, filename_prefix):
     # Add value labels
     for bar, rate in zip(bars2, rates):
         height = bar.get_height()
-        ax2.text(bar.get_x() + bar.get_width()/2., height,
+        ax2.text(bar.get_x() + bar.get_width() / 2.,
+                 height,
                  f'{rate:.1f}%',
-                 ha='center', va='bottom', fontsize=11, fontweight='bold')
+                 ha='center',
+                 va='bottom',
+                 fontsize=11,
+                 fontweight='bold')
 
     plt.suptitle(f'Win Rate Analysis: {agent1_name} vs {agent2_name}',
-                 fontsize=14, fontweight='bold', y=1.02)
+                 fontsize=14,
+                 fontweight='bold',
+                 y=1.02)
     plt.tight_layout()
 
-    filepath = os.path.join(
-        output_dir, f'{filename_prefix}_win_rate_analysis.png')
+    filepath = os.path.join(output_dir,
+                            f'{filename_prefix}_win_rate_analysis.png')
     plt.savefig(filepath, dpi=300, bbox_inches='tight')
     print(f"  Saved: {filepath}")
 
@@ -194,6 +178,5 @@ def generate_all_plots(results, output_dir, filename_prefix):
 
     plot_win_rate_analysis(results, output_dir, filename_prefix)
     plot_winnings_after_x_games(results, output_dir, filename_prefix)
-    plot_cumulative_differences(results, output_dir, filename_prefix)
 
     print(f"All plots saved to: {output_dir}")

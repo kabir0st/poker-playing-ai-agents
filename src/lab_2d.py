@@ -68,8 +68,11 @@ if __name__ == "__main__":
 
     # Run experiment: 100 games, 50 hands per game
     print("\nRunning experiment with 100 games...")
-    results = run_experiment(num_games=10000, fixed_bid_amount=17)
-
+    results = run_experiment(num_games=100, fixed_bid_amount=25)
+    print(f"Mean difference: {results['mean_difference']}")
+    print(f"Standard deviation of difference: {results['std_difference']}")
+    print(f"Mean winnings for Random Agent: {results['mean_agent1_winnings']}")
+    print(f"Mean winnings for Fixed Agent: {results['mean_agent2_winnings']}")
     # Generate plots
     plots_dir = os.path.join(os.path.dirname(__file__), '..', 'plots')
     os.makedirs(plots_dir, exist_ok=True)

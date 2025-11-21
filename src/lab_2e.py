@@ -32,8 +32,12 @@ def create_reflex_agent(name: str) -> Agent:
     return ReflexAgent(name)
 
 
-def run_experiment(agent1_factory, agent2_factory, agent1_name, agent2_name,
-                   num_games=100, num_hands=50):
+def run_experiment(agent1_factory,
+                   agent2_factory,
+                   agent1_name,
+                   agent2_name,
+                   num_games=100,
+                   num_hands=50):
     """
     Run multiple games between two agents.
     """
@@ -45,17 +49,13 @@ def run_experiment(agent1_factory, agent2_factory, agent1_name, agent2_name,
     print(f"  {agent1_name} vs {agent2_name}")
     print("-" * 70)
 
-    for _ in tqdm(
-        range(num_games),
-        desc=f"Games ({agent1_name} vs {agent2_name})",
-        unit="game"
-    ):
+    for _ in tqdm(range(num_games),
+                  desc=f"Games ({agent1_name} vs {agent2_name})",
+                  unit="game"):
         # Create a new game with fresh agents
-        game = PokerGame(
-            agent1_factory=agent1_factory,
-            agent2_factory=agent2_factory,
-            num_hands=num_hands
-        )
+        game = PokerGame(agent1_factory=agent1_factory,
+                         agent2_factory=agent2_factory,
+                         num_hands=num_hands)
 
         # Play the game
         game_result = game.play_game()
@@ -66,22 +66,10 @@ def run_experiment(agent1_factory, agent2_factory, agent1_name, agent2_name,
         agent1_winnings.append(game_result['agent1_winnings'])
         agent2_winnings.append(game_result['agent2_winnings'])
 
-    # Calculate statistics
-    mean_diff = statistics.mean(differences)
-    std_diff = statistics.stdev(differences) if len(differences) > 1 else 0
-    mean_agent1 = statistics.mean(agent1_winnings)
-    mean_agent2 = statistics.mean(agent2_winnings)
-
     return {
         'differences': differences,
         'agent1_winnings': agent1_winnings,
         'agent2_winnings': agent2_winnings,
-        'mean_difference': mean_diff,
-        'std_difference': std_diff,
-        'mean_agent1_winnings': mean_agent1,
-        'mean_agent2_winnings': mean_agent2,
-        'num_games': num_games,
-        'num_hands': num_hands,
         'agent1_name': agent1_name,
         'agent2_name': agent2_name
     }
@@ -105,6 +93,17 @@ if __name__ == "__main__":
         num_games=100,
         num_hands=50)
 
+    # Calculate and print statistics
+    mean_diff1 = statistics.mean(results1['differences'])
+    std_diff1 = (statistics.stdev(results1['differences'])
+                 if len(results1['differences']) > 1 else 0)
+    mean_agent1_1 = statistics.mean(results1['agent1_winnings'])
+    mean_agent2_1 = statistics.mean(results1['agent2_winnings'])
+    print(f"Mean difference: {mean_diff1}")
+    print(f"Standard deviation of difference: {std_diff1}")
+    print(f"Mean winnings for {results1['agent1_name']}: {mean_agent1_1}")
+    print(f"Mean winnings for {results1['agent2_name']}: {mean_agent2_1}")
+
     # Generate plots for Experiment 1
     plots_dir = os.path.join(os.path.dirname(__file__), '..', 'plots')
     os.makedirs(plots_dir, exist_ok=True)
@@ -123,10 +122,22 @@ if __name__ == "__main__":
         num_games=100,
         num_hands=50)
 
+    # Calculate and print statistics
+    mean_diff2 = statistics.mean(results2['differences'])
+    std_diff2 = (statistics.stdev(results2['differences'])
+                 if len(results2['differences']) > 1 else 0)
+    mean_agent1_2 = statistics.mean(results2['agent1_winnings'])
+    mean_agent2_2 = statistics.mean(results2['agent2_winnings'])
+    print(f"Mean difference: {mean_diff2}")
+    print(f"Standard deviation of difference: {std_diff2}")
+    print(f"Mean winnings for {results2['agent1_name']}: {mean_agent1_2}")
+    print(f"Mean winnings for {results2['agent2_name']}: {mean_agent2_2}")
+
     # Generate plots for Experiment 2
     generate_all_plots(results2, plots_dir, 'lab_2e_e2')
 
     # Summary
-    print("-" * 70)
+    print("\n" + "-" * 70)
     print("Experiment complete!")
+    print(f"Plots saved to: {plots_dir}")
     print("-" * 70)
