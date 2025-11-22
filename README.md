@@ -1,17 +1,16 @@
 # Poker AI Lab - Agent Comparison Project
 
-A simplified poker game environment for comparing different AI agent strategies, from simple random bidding to sophisticated reflex agents with memory.
+A simplified poker game environment for comparing different AI agent strategies, from simple random bidding to sophisticated reflex agents with memory. This project demonstrates how different information usage strategies affect agent performance in a simplified 3-card poker game.
 
 ## 📋 Overview
 
-This project implements and compares multiple poker-playing agents in a simplified 3-card poker game. The goal is to understand how different information usage strategies affect agent performance.
+This project implements and compares four types of poker-playing agents:
+- **Random Agent**: Acts randomly without considering any external input
+- **Fixed Agent**: Performs a sequence of actions which is already defined
+- **Reflex Agent**: Action is decided based only on current sensor readings (hand strength)
+- **Agent with Memory**: Decision is based on current as well as past data (learns opponent patterns)
 
-## 🎯 Key Features
-
-- **Multiple Agent Types**: Random, Fixed, Reflex, and Reflex with Memory
-- **Comprehensive Experiments**: Statistical analysis with 100 games × 50 hands
-- **Rich Visualizations**: 2 types of plots per experiment showing win rates and cumulative performance
-- **Modular Architecture**: Easy to extend with new agent strategies
+The goal is to understand how different information usage strategies affect agent performance through empirical analysis of 100 games (50 hands per game).
 
 ## 🚀 Quick Start
 
@@ -69,30 +68,7 @@ poker-ai/
 └── README.md              # This file
 ```
 
-## 📊 Results Summary
-
-| Agent Comparison | Mean Advantage | Win Rate | Key Finding |
-|-----------------|----------------|----------|-------------|
-| Random vs Fixed | ~$0/game | ~50% | Baseline strategies perform similarly |
-| Reflex vs Random | ~$400-600/game | ~85-95% | Hand strength information is highly valuable |
-| Reflex vs Fixed | ~$400-600/game | ~85-95% | Adaptive strategy beats fixed strategy |
-| Reflex+Memory vs Reflex | ~$60-100/game | ~55-65% | Opponent observation provides incremental value |
-
-**Note**: Win rate indicates the percentage of games (out of 100) where one agent had more total winnings after 50 hands than the other.
-
-## 📚 Documentation
-
-Comprehensive documentation is available in the [`documentation/`](documentation/) directory:
-
-### Main Documentation
-- **[Full Documentation](documentation/README.md)** - Complete guide covering game rules, architecture, agents, and statistics
-- **[Quick Reference](documentation/QUICK_REFERENCE.md)** - Quick lookup guide for agents and statistics
-
-### Detailed Guides
-- **[Agent Architecture](documentation/AGENTS.md)** - Complete guide to all agent types, their creation, decision-making processes, and flow diagrams
-- **[Game Structure](documentation/GAME_STRUCTURE.md)** - Complete game rules, hand types, scoring system, and game flow
-- **[Code Flow](documentation/CODE_FLOW.md)** - Detailed architecture, data structures, component interactions, and execution flow
-- **[Flow Diagrams](documentation/FLOW_DIAGRAMS.md)** - Visual Mermaid flowcharts for each lab experiment (Lab 2d, 2e, 2f)
+For detailed code implementation and architecture, see the [documentation](documentation/) directory.
 
 ## 🎮 Game Overview
 
@@ -111,179 +87,124 @@ A simplified poker game where:
 ## 🤖 Agent Strategies
 
 ### 1. Random Agent
-- Bids randomly ($0-$50)
-- No information usage
-- Baseline for comparison
+Bids randomly ($0-$50) without considering any information. Acts as a baseline for comparison.
 
 ### 2. Fixed Agent
-- Always bids fixed amount ($25)
-- Predictable strategy
-- Baseline for comparison
+Always bids the same fixed amount ($25). Represents a simple, predictable strategy.
 
 ### 3. Reflex Agent
-- Bids based on hand strength
-- Formula: `bid = (hand_score / 39) * 50`
-- Uses available information effectively
+Bids based on hand strength using the formula:
+\[
+\text{bid} = \frac{\text{hand\_score}}{39} \times 50
+\]
+
+- Weak hands (score 1-13): Bid $1-$16
+- Medium hands (score 14-26): Bid $18-$33
+- Strong hands (score 27-39): Bid $35-$50
+
+This agent demonstrates the value of using available information (hand strength) to make decisions.
 
 ### 4. Reflex Agent with Memory
-- Hand strength + opponent observation and learning
-- Learns bid-to-hand-strength ratios from showdown observations
-- Predicts opponent hand strength from their bids
-- Adjusts bid based on predicted hand strength comparison
-- More adaptive and sophisticated strategy
+Extends the reflex agent by learning opponent patterns:
+- **Learning Mechanism**: After each hand, learns bid-to-hand-strength ratios from opponent behavior
+- **Prediction**: Predicts opponent hand strength from their bids using learned ratios
+- **Adaptive Bidding**: Adjusts bids based on predicted hand strength comparison
+  - If predicted opponent is stronger → bid less (avoid overcommitting)
+  - If predicted opponent is weaker → bid more (capitalize on weakness)
+- **Confidence Scaling**: Stronger own hands make more confident adjustments
 
-## 📈 Visualizations and Findings
+For detailed implementation, see [documentation/AGENTS.md](documentation/AGENTS.md).
 
-Each experiment generates 2 types of plots that provide comprehensive insights into agent performance:
+## 📊 Results Summary
 
-### Plot Types
+| Agent Comparison | Mean Advantage | Win Rate | Key Finding |
+|-----------------|----------------|----------|-------------|
+| Random vs Fixed | ~$0/game | ~50% | Baseline strategies perform similarly |
+| Reflex vs Random | ~$470/game | ~85-95% | Hand strength information is highly valuable |
+| Reflex vs Fixed | ~$397/game | ~85-95% | Adaptive strategy beats fixed strategy |
+| Reflex+Memory vs Reflex | ~$309/game | ~71% | Opponent observation provides incremental value |
 
-#### 1. Win Rate Analysis Plot
-**File naming**: `{experiment}_win_rate_analysis.png`
+**Note**: Win rate indicates the percentage of games (out of 100) where one agent had **more total winnings after 50 hands** than the other. This is a game-level metric, not individual hand wins.
 
-This plot shows two side-by-side bar charts:
 
-**Left Chart - Win Counts:**
-- Number of games won by each agent
-- Shows raw counts (e.g., "Agent 1: 65 wins, Agent 2: 35 wins")
-- Includes tie counts if any games ended in a tie
+## 📈 Experimental Results and Findings
 
-**Right Chart - Win Rates:**
-- Percentage of games won by each agent
-- Shows win rates as percentages (e.g., "Agent 1: 65%, Agent 2: 35%")
-- Includes tie rate percentage
+### Lab 2d: Random vs Fixed Agent
 
-**Important Note**: A "win" in this context means having **more total winnings after 50 hands**, not winning individual hands. Each game consists of 50 hands, and the agent with higher cumulative winnings at the end wins the game.
+After running 100 games (50 hands each), the random and fixed agents perform about the same, with win rates around 52% and 48%. The mean difference is approximately $37, which is negligible compared to the high standard deviation of ~$950. This indicates that luck dominates outcomes when neither agent uses hand strength information.
 
-**What it tells us:**
-- **Consistency**: How often one agent outperforms the other
-- **Dominance**: Whether one agent consistently wins or if results are close
-- **Reliability**: High win rate (>70%) indicates a strong, consistent advantage
+**Key Finding**: Both baseline strategies are essentially equivalent over many games. Neither agent looks at hand strength, so they can't play smart when they have good cards or avoid big losses with bad ones.
 
-#### 2. Cumulative Winnings After X Games Plot
-**File naming**: `{experiment}_winnings_after_x_games.png`
+![Random vs Fixed Win Rate](plots/lab_2d_random_vs_fixed_win_rate_analysis.png)
 
-This line plot shows:
-- **X-axis**: Number of games played (1 to 100)
-- **Y-axis**: Cumulative winnings (in dollars)
-- **Two lines**: One for each agent showing cumulative winnings across all games
+![Random vs Fixed Cumulative Winnings](plots/lab_2d_random_vs_fixed_winnings_after_x_games.png)
 
-**What it tells us:**
-- **Trend**: Whether one agent's advantage increases, decreases, or stays constant over time
-- **Consistency**: Steep, steady upward slope indicates consistent advantage
-- **Magnitude**: The vertical gap between lines shows the size of the advantage
-- **Stability**: Parallel lines indicate stable performance difference
+### Lab 2e: Reflex Agent Experiments
 
-### Key Findings from Experiments
+#### Experiment 1: Reflex vs Random
 
-#### Lab 2d: Random vs Fixed Agent
-**Plots**: `lab_2d_random_vs_fixed_*.png`
+The reflex agent demonstrates a massive advantage, winning approximately 85-95% of games with a mean advantage of ~$470 per game. The cumulative winnings plot shows a steep upward divergence, indicating consistent superior performance.
 
-**Findings:**
-- **Win Rate**: Approximately 50/50 split (no significant advantage)
-- **Cumulative Winnings**: Lines remain close together, showing minimal difference
-- **Conclusion**: Both baseline strategies perform similarly. Random bidding and fixed bidding are roughly equivalent when neither uses hand strength information.
+**Key Finding**: Using hand strength information provides a massive advantage. The reflex agent consistently outperforms random by bidding appropriately based on hand quality—scaling bids up with strong hands and down with weak hands.
 
-#### Lab 2e: Reflex Agent Experiments
+![Reflex vs Random Win Rate](plots/lab_2e_win_rate_analysis.png)
 
-**Experiment 1: Reflex vs Random** (`lab_2e_*.png`)
-- **Win Rate**: Reflex agent wins ~85-95% of games
-- **Cumulative Winnings**: Reflex agent's line shows steep upward trend, diverging significantly from Random
-- **Mean Advantage**: ~$400-600 per game
-- **Conclusion**: Using hand strength information provides massive advantage. The Reflex agent consistently outperforms Random by bidding appropriately based on hand quality.
+![Reflex vs Random Cumulative Winnings](plots/lab_2e_winnings_after_x_games.png)
 
-**Experiment 2: Reflex vs Fixed** (`lab_2e_e2_*.png`)
-- **Win Rate**: Reflex agent wins ~85-95% of games
-- **Cumulative Winnings**: Similar pattern to Experiment 1 - Reflex agent's line diverges strongly
-- **Mean Advantage**: ~$400-600 per game
-- **Conclusion**: Adaptive strategy (bidding based on hand strength) dramatically outperforms fixed strategy. The ability to adjust bids based on hand quality is crucial.
+#### Experiment 2: Reflex vs Fixed
 
-#### Lab 2f: Reflex with Memory vs Reflex without Memory
-**Plots**: `lab_2f_reflex_memory_vs_no_memory_*.png`
+Similar to Experiment 1, the reflex agent wins approximately 85-95% of games with a mean advantage of ~$397 per game. The adaptive strategy dramatically outperforms the fixed strategy.
 
-**Findings:**
-- **Win Rate**: Memory agent wins ~55-65% of games
-- **Cumulative Winnings**: Memory agent's line shows gradual upward divergence
-- **Mean Advantage**: ~$60-100 per game (smaller but consistent)
-- **Conclusion**: Learning opponent patterns and predicting hand strength provides incremental but meaningful advantage. The memory agent's ability to learn from showdowns and adjust bids based on predicted opponent strength gives it a consistent edge.
+**Key Finding**: Adaptive strategy (bidding based on hand strength) dramatically outperforms fixed strategy. The ability to adjust bids based on hand quality is crucial for success.
 
-### Interpreting the Plots
+![Reflex vs Fixed Win Rate](plots/lab_2e_e2_win_rate_analysis.png)
 
-**Strong Advantage Indicators:**
-- Win rate > 70%
-- Cumulative winnings lines diverge significantly
-- Steady upward trend in cumulative difference
+![Reflex vs Fixed Cumulative Winnings](plots/lab_2e_e2_winnings_after_x_games.png)
 
-**Weak Advantage Indicators:**
-- Win rate 50-60%
-- Cumulative winnings lines stay close together
-- Small, gradual divergence
+### Lab 2f: Reflex with Memory vs Reflex without Memory
 
-**No Advantage:**
-- Win rate ~50%
-- Cumulative winnings lines overlap or cross frequently
-- No clear trend
+The memory agent wins approximately 71% of games with a mean advantage of ~$309 per game. While the advantage is smaller than reflex vs random/fixed, it demonstrates that opponent observation and learning provide incremental value.
 
-### Example Plot Locations
+**Key Finding**: Learning opponent patterns and predicting hand strength provides incremental but meaningful advantage. The memory agent's ability to:
+- Learn bid-to-hand-strength ratios from showdown observations
+- Predict opponent hand strength from their bids
+- Adjust bids based on predicted hand strength comparison
 
-All plots are saved in the `plots/` directory:
-- `lab_2d_random_vs_fixed_win_rate_analysis.png`
-- `lab_2d_random_vs_fixed_winnings_after_x_games.png`
-- `lab_2e_win_rate_analysis.png`
-- `lab_2e_winnings_after_x_games.png`
-- `lab_2e_e2_win_rate_analysis.png`
-- `lab_2e_e2_winnings_after_x_games.png`
-- `lab_2f_reflex_memory_vs_no_memory_win_rate_analysis.png`
-- `lab_2f_reflex_memory_vs_no_memory_winnings_after_x_games.png`
+This creates a more adaptive, context-aware strategy that improves over time.
 
-Plots are saved as high-resolution PNG files (300 DPI) suitable for presentations and reports.
+![Memory vs Reflex Win Rate](plots/lab_2f_reflex_memory_vs_no_memory_win_rate_analysis.png)
 
-## 🔬 Experiments
+![Memory vs Reflex Cumulative Winnings](plots/lab_2f_reflex_memory_vs_no_memory_winnings_after_x_games.png)
 
-### Lab 2d: Random vs Fixed
-Compares two baseline strategies to establish baseline performance.
+### Performance Comparison Table
 
-### Lab 2e: Reflex Agent Comparisons
-- Experiment 1: Reflex vs Random (generates plots with prefix `lab_2e`)
-- Experiment 2: Reflex vs Fixed (generates plots with prefix `lab_2e_e2`)
-- Demonstrates value of hand strength information
+The following table presents empirical results from 100 games (50 hands per game) comparing all agent pairs:
 
-### Lab 2f: Memory Agent
-Compares Reflex agent with and without memory to evaluate opponent observation value.
+| Agent vs. | Random | Fixed  | Reflex |
+|-----------|--------|--------|--------|
+| Random | 0 | -93 ± 1054 | -470 ± 848 |
+| Fixed | 93 ± 1054 | 0 | -397 ± 701 |
+| Reflex | 470 ± 848 | 397 ± 701 | 0 |
 
-## 🛠️ Development
+Values represent mean bankroll difference ± standard deviation (in dollars), where positive values indicate the row agent wins more than the column agent.
 
-### Adding a New Agent
+### Key Insights
 
-1. Create a new file (e.g., `lab_2x.py`)
-2. Implement agent class inheriting from `Agent`
-3. Implement `make_bid()` method
-4. Optionally implement `observe_showdown()` for learning
-5. Add comparison experiment
+1. **Information Utilization is Crucial**: The reflex agent's ability to use hand strength information provides a massive advantage (~$400-500 per game) over agents that don't use this information.
 
-### Running Custom Experiments
+2. **Adaptive Strategies Outperform Static Ones**: The reflex agent consistently outperforms the fixed agent, demonstrating that adaptive strategies beat static ones.
 
-```python
-from libs.poker_game import PokerGame
-from your_agent import create_your_agent
+3. **Memory Adds Incremental Value**: The memory agent's learning mechanism provides additional advantage (~$300 per game) over the simple reflex agent, confirming that opponent observation adds value.
 
-game = PokerGame(
-    agent1_factory=lambda: create_your_agent("Agent 1"),
-    agent2_factory=lambda: create_random_agent("Agent 2"),
-    num_hands=50
-)
-result = game.play_game()
-```
+4. **Win Rate vs Mean Difference**: Win rate shows consistency (how often one agent wins), while mean difference shows magnitude (how much they win by). High win rates (>70%) with positive mean differences indicate strong, consistent advantages.
 
-## 📝 License
+## 📚 Documentation
 
-This project is part of an AI labs course assignment.
+Comprehensive documentation is available in the [`documentation/`](documentation/) directory:
 
-## 👥 Authors
-
-Created for AI Labs course - Poker Agent Comparison Project
-
----
-
-For questions or issues, refer to the [documentation](documentation/README.md) or check the code comments.
-
+- **[Full Documentation](documentation/README.md)** - Complete guide covering game rules, architecture, agents, and statistics
+- **[Agent Architecture](documentation/AGENTS.md)** - Detailed guide to all agent types, their creation, decision-making processes, and flow diagrams
+- **[Game Structure](documentation/GAME_STRUCTURE.md)** - Complete game rules, hand types, scoring system, and game flow
+- **[Code Flow](documentation/CODE_FLOW.md)** - Detailed architecture, data structures, component interactions, and execution flow
+- **[Flow Diagrams](documentation/FLOW_DIAGRAMS.md)** - Visual Mermaid flowcharts for each lab experiment
+- **[Quick Reference](documentation/QUICK_REFERENCE.md)** - Quick lookup guide for agents and statistics
