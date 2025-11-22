@@ -289,28 +289,61 @@ flowchart TD
     BaseBid --> CheckOpp{Opponent has<br/>previous bids?}
 
     CheckOpp -->|No| NoAdjust[No adjustment<br/>Return base bid]
-    CheckOpp -->|Yes| GetLast[Get last opponent bid]
+    CheckOpp -->|Yes| Predict[Predict opponent hand strength<br/>using learned ratios]
 
-    GetLast --> Compare{Compare bid}
-    Compare -->|> $30| HighBid[Opponent bid high<br/>Reduce by $5]
-    Compare -->|< $20| LowBid[Opponent bid low<br/>Increase by $5]
-    Compare -->|$20-$30| Neutral[No adjustment]
+    Predict --> CheckRatios{Learned ratios<br/>available?}
+    CheckRatios -->|No| Default[Use default prediction<br/>25.0]
+    CheckRatios -->|Yes| CalcRatio[Calculate avg ratio<br/>from learned ratios]
 
-    HighBid --> Apply[Apply adjustment]
-    LowBid --> Apply
-    Neutral --> Apply
+    CalcRatio --> CalcAvg[Calculate avg<br/>opponent bid]
+    CalcAvg --> Multiply[predicted_hand =<br/>avg_bid × avg_ratio]
+    Multiply --> Compare[Compare hand strengths:<br/>diff = own - predicted]
+
+    Default --> Compare
+
+    Compare --> Confidence[Calculate confidence:<br/>confidence = hand_score / 39]
+    Confidence --> Multiplier[confidence_multiplier =<br/>0.5 + confidence]
+    Multiplier --> Normalize[Normalize difference:<br/>normalized_diff = diff / 39]
+    Normalize --> Adjust[Calculate adjustment:<br/>adjustment = normalized_diff × 20 × multiplier]
+
+    Adjust --> Apply[Apply adjustment:<br/>bid = base_bid + adjustment]
+    NoAdjust --> Apply
 
     Apply --> Clamp[Clamp to 0-50 range]
     Clamp --> Return[Return final bid]
-    NoAdjust --> Return
 
     Return --> End([End])
 
     style Start fill:#90EE90
     style End fill:#FFB6C1
-    style HighBid fill:#FF6B6B
-    style LowBid fill:#51CF66
-    style Neutral fill:#FFD93D
+    style Predict fill:#FFA500
+    style Compare fill:#87CEEB
+    style Adjust fill:#FFD700
+```
+
+## Memory Agent Learning Logic
+
+```mermaid
+flowchart TD
+    Start([Showdown Phase]) --> Reveal[Opponent reveals hand]
+    Reveal --> Analyze[Analyze opponent hand strength]
+    Analyze --> GetBids[Get opponent bids<br/>from current hand]
+
+    GetBids --> CheckBids{Bids available?}
+    CheckBids -->|No| Skip[Skip learning]
+    CheckBids -->|Yes| CalcAvg[Calculate avg bid]
+
+    CalcAvg --> CalcRatio[Calculate ratio:<br/>ratio = hand_strength / avg_bid]
+    CalcRatio --> Store[Store ratio in<br/>opponent_ratios list]
+
+    Store --> Reset[Reset current_hand_opponent_bids]
+    Reset --> End([End])
+    Skip --> End
+
+    style Start fill:#90EE90
+    style End fill:#FFB6C1
+    style CalcRatio fill:#FFD700
+    style Store fill:#87CEEB
 ```
 
 ---
@@ -323,9 +356,9 @@ flowchart LR
     Lab2d --> Lab2e[Lab 2e:<br/>Reflex Experiments]
     Lab2e --> Lab2f[Lab 2f:<br/>Memory Experiment]
 
-    Lab2d --> Plots1[Generate 6 plots]
-    Lab2e --> Plots2[Generate 12 plots]
-    Lab2f --> Plots3[Generate 6 plots]
+    Lab2d --> Plots1[Generate 2 plots]
+    Lab2e --> Plots2[Generate 4 plots<br/>2 per experiment]
+    Lab2f --> Plots3[Generate 2 plots]
 
     Plots1 --> Analysis1[Analyze Results]
     Plots2 --> Analysis2[Analyze Results]

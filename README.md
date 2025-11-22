@@ -17,7 +17,12 @@ This project implements and compares multiple poker-playing agents in a simplifi
 
 ### Prerequisites
 ```bash
-pip install matplotlib numpy
+pip install matplotlib numpy tqdm
+```
+
+Or using the project's dependency manager:
+```bash
+uv sync  # or pip install -e .
 ```
 
 ### Run Experiments
@@ -55,10 +60,12 @@ poker-ai/
 ├── plots/                 # Generated visualization plots
 ├── documentation/         # Detailed documentation
 │   ├── README.md          # Full documentation
+│   ├── AGENTS.md          # Agent architecture guide
 │   ├── QUICK_REFERENCE.md # Quick reference guide
 │   ├── GAME_STRUCTURE.md  # Game rules and structure
 │   ├── CODE_FLOW.md      # Code architecture and flow
 │   └── FLOW_DIAGRAMS.md   # Visual flow diagrams
+├── pyproject.toml         # Project dependencies
 └── README.md              # This file
 ```
 
@@ -116,21 +123,19 @@ A simplified poker game where:
 - Uses available information effectively
 
 ### 4. Reflex Agent with Memory
-- Hand strength + opponent observation
-- Adjusts bid based on opponent's last bid
-- More adaptive strategy
+- Hand strength + opponent observation and learning
+- Learns bid-to-hand-strength ratios from showdown observations
+- Predicts opponent hand strength from their bids
+- Adjusts bid based on predicted hand strength comparison
+- More adaptive and sophisticated strategy
 
 ## 📈 Visualizations
 
-Each experiment generates 6 types of plots:
-1. Bankroll differences histogram
-2. Winnings comparison box plot
-3. Cumulative differences over games
-4. Winnings over games line plot
-5. Statistics summary bar chart
-6. Win rate analysis
+Each experiment generates 2 types of plots:
+1. Win rate analysis (win counts and percentages)
+2. Cumulative winnings after X games
 
-See `plots/README.md` for detailed plot descriptions.
+Plots are saved as high-resolution PNG files (300 DPI) in the `plots/` directory.
 
 ## 🔬 Experiments
 
@@ -138,8 +143,8 @@ See `plots/README.md` for detailed plot descriptions.
 Compares two baseline strategies to establish baseline performance.
 
 ### Lab 2e: Reflex Agent Comparisons
-- Experiment 1: Reflex vs Random
-- Experiment 2: Reflex vs Fixed
+- Experiment 1: Reflex vs Random (generates plots with prefix `lab_2e`)
+- Experiment 2: Reflex vs Fixed (generates plots with prefix `lab_2e_e2`)
 - Demonstrates value of hand strength information
 
 ### Lab 2f: Memory Agent

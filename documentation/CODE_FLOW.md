@@ -129,8 +129,10 @@ PokerGame.__init__()
   → Initialize winnings to 0
 
 play_game()
+  → Initialize agent1_bids_first (random 50/50 chance)
   → For each hand (1 to num_hands):
       → play_hand(hand_num)
+      → Toggle agent1_bids_first (alternates each hand)
   → Calculate final difference
   → Return results dictionary
 
@@ -142,9 +144,18 @@ play_hand(hand_num)
 
   → Phase 2: Bidding (3 rounds)
     → For phase in [1, 2, 3]:
-        → bid1 = agent1.make_bid(phase, own_bids, opp_bids)
-        → bid2 = agent2.make_bid(phase, own_bids, opp_bids)
+        → If agent1_bids_first:
+            → bid1 = agent1.make_bid(phase, agent1_bids, agent2_bids)
+            → agent1_bids.append(bid1)
+            → bid2 = agent2.make_bid(phase, agent2_bids, agent1_bids)
+            → agent2_bids.append(bid2)
+        → Else (agent2_bids_first):
+            → bid2 = agent2.make_bid(phase, agent2_bids, agent1_bids)
+            → agent2_bids.append(bid2)
+            → bid1 = agent1.make_bid(phase, agent1_bids, agent2_bids)
+            → agent1_bids.append(bid1)
         → Add bids to pot
+        → Toggle agent1_bids_first for next hand
 
   → Phase 3: Showdown
     → score1 = analyse_hand(hand1)
@@ -208,24 +219,42 @@ make_bid(phase, own_bids, opponent_bids)
 ```
 make_bid(phase, own_bids, opponent_bids)
   → Get hand from self.hand
+  → Store opponent_bids in self.current_hand_opponent_bids
   → hand_score = analyse_hand(self.hand)
   → base_bid = (hand_score / 39.0) * 50
 
   → If opponent_bids exists:
-      → last_opponent_bid = opponent_bids[-1]
-      → If last_opponent_bid > 30:
-          → adjustment = -5
-      → Else if last_opponent_bid < 20:
-          → adjustment = +5
-      → Else:
-          → adjustment = 0
+      → predicted_opponent_hand = _predict_opponent_hand_strength(opponent_bids)
+        → If no learned ratios: return 25.0 (default)
+        → Else: current_avg_bid = average(opponent_bids)
+        → avg_ratio = average(self.opponent_ratios)
+        → predicted_hand = current_avg_bid × avg_ratio
+
+      → hand_strength_diff = hand_score - predicted_opponent_hand
+      → confidence = hand_score / 39.0
+      → confidence_multiplier = 0.5 + confidence
+      → normalized_diff = hand_strength_diff / 39.0
+      → adjustment = normalized_diff × 20.0 × confidence_multiplier
+  → Else:
+      → adjustment = 0
 
   → bid = base_bid + adjustment
   → Clamp to [0, 50]
   → Return bid
+
+observe_showdown(opponent_hand)
+  → opponent_hand_strength = analyse_hand(opponent_hand)
+  → opponent_avg_bid = average(self.current_hand_opponent_bids)
+  → If opponent_avg_bid > 0:
+      → ratio = opponent_hand_strength / opponent_avg_bid
+      → self.opponent_ratios.append(ratio)
+  → Reset self.current_hand_opponent_bids = []
 ```
 
-**State**: Stores `hand` and uses `opponent_bids` parameter
+**State**:
+- Stores `hand` (set by `receive_hand()`)
+- Stores `opponent_ratios` (learned from showdowns)
+- Stores `current_hand_opponent_bids` (temporary, for current hand)
 
 ## Experiment Flow
 
@@ -325,12 +354,8 @@ run_experiment(Reflex+Memory, Reflex)
 **Flow**:
 ```
 generate_all_plots(results, output_dir, prefix)
-  → plot_bankroll_differences()
-  → plot_winnings_comparison()
-  → plot_cumulative_differences()
-  → plot_winnings_over_games()
-  → plot_statistics_summary()
   → plot_win_rate_analysis()
+  → plot_winnings_after_x_games()
 ```
 
 **Each Plot Function**:

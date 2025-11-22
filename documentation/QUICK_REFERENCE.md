@@ -7,7 +7,7 @@
 | **Random** | Random bids ($0-$50) | None | Baseline |
 | **Fixed** | Fixed bid ($25) | None | Baseline |
 | **Reflex** | Hand strength proportional | Own hand | ~$400-600 advantage vs Random/Fixed |
-| **Reflex + Memory** | Hand strength + opponent adjustment | Own hand + opponent bids | ~$60-100 advantage vs Reflex |
+| **Reflex + Memory** | Hand strength + opponent learning & prediction | Own hand + opponent bids + learned ratios | ~$60-100 advantage vs Reflex |
 
 ## Key Statistics Explained
 

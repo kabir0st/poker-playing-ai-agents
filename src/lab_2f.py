@@ -8,68 +8,51 @@ from libs.poker_game import PokerGame
 from plotting_utils import generate_all_plots
 from tqdm import tqdm
 
+# A game "win" = having more total winnings after 50 hands
+
 
 def create_reflex_agent_with_memory(name):
 
     class ReflexAgentWithMemory(Agent):
+
+        def __init__(self, name):
+            super().__init__(name)
+            self.opponent_ratios = []
+            self.current_hand_opponent_bids = []
 
         def make_bid(self, phase, own_bids, opponent_bids):
             if self.hand is None:
                 # If no hand received yet, bid minimum
                 return 0
 
-            # Evaluate hand strength (score ranges from 1-39)
+            if opponent_bids:
+                self.current_hand_opponent_bids = opponent_bids.copy()
             hand_score = analyse_hand(self.hand)
             base_bid = (hand_score / 39.0) * 50
 
-            # Adjust based on opponent's last bid (if available)
-            # Note: When bidding second in a phase,
-            # opponent_bids includes the opponent's
-            # bid from the current phase, allowing real-time
-            # reaction to opponent behavior
+            # Adjust based on opponent's bidding behavior and predicted hand
             adjustment = 0
             if opponent_bids:  # If opponent has bid
-                last_opponent_bid = opponent_bids[-1]
+                # Predict opponent's hand strength from their current bids
+                # using learned bid-to-hand-strength mapping
+                predicted_opponent_hand = self._predict_opponent_hand_strength(
+                    opponent_bids)
 
-                # Calculate expected opponent bid
-                # Average hand strength is ~20 (midpoint of 1-39),
-                # so expected bid ~25.6
-                # We can also use our own base_bid as a reference point
-                expected_opponent_bid = 25.0  # Average expected bid
-                # Calculate the difference between opponent bid and
-                # expected bid
-                bid_difference = last_opponent_bid - expected_opponent_bid
+                # Compare our hand strength to predicted opponent hand strength
+                hand_strength_diff = hand_score - predicted_opponent_hand
 
                 # Calculate confidence based on hand strength
-                # Normalize hand strength to [0, 1] range (1-39 -> 0-1)
-                # Stronger hands = higher confidence
-                confidence = (hand_score) / 39.0
-
-                # Proportional adjustment based on bid difference
-                # The adjustment is proportional to how much the opponent
-                # deviates from expected
-                # Maximum adjustment factor: if opponent bids 0 or 50,
-                # difference is ±25
-                # We scale this to a reasonable adjustment range
-                base_adjustment_factor = bid_difference / 25.0
-
-                # Apply confidence multiplier: higher confidence =
-                #  more aggressive adjustment
-                # Confidence ranges from 0 (weak hand) to 1 (strong hand)
-                # When confidence is high, we trust our hand more
-                # and adjust more aggressively
-                # When confidence is low, we're more cautious
+                confidence = hand_score / 39.0
                 confidence_multiplier = 0.5 + confidence
 
-                # Calculate proportional adjustment
-                # Negative bid_difference (opponent bid low) ->
-                # positive adjustment (we bid more)
-                # Positive bid_difference (opponent bid high) ->
-                # negative adjustment (we bid less)
-                # The adjustment is proportional to the difference
-                # and scaled by confidence
-                max_adjustment = 15.0  # Maximum adjustment amount
-                adjustment = -base_adjustment_factor * max_adjustment * \
+                # Adjust bid based on hand strength comparison
+                # If we have stronger hand (positive diff), bid more
+                # If opponent has stronger hand (negative diff), bid less
+                # Scale adjustment by hand strength difference and confidence
+                # Normalize difference to [-1, 1] range (max diff is ±38)
+                normalized_diff = hand_strength_diff / 39.0
+                max_adjustment = 20.0  # Maximum adjustment amount
+                adjustment = normalized_diff * max_adjustment * \
                     confidence_multiplier
 
             # Apply adjustment
@@ -80,8 +63,28 @@ def create_reflex_agent_with_memory(name):
 
             return bid
 
+        def _predict_opponent_hand_strength(self, opponent_bids):
+            if not self.opponent_ratios or not opponent_bids:
+                return 25.0
+            current_avg_bid = sum(opponent_bids) / len(opponent_bids)
+            avg_ratio = sum(self.opponent_ratios) / len(self.opponent_ratios)
+            predicted_hand = current_avg_bid * avg_ratio
+            predicted_hand = max(1.0, min(39.0, predicted_hand))
+            return predicted_hand
+
         def observe_showdown(self, opponent_hand):
-            pass
+            opponent_hand_strength = analyse_hand(opponent_hand)
+            if self.current_hand_opponent_bids:
+                opponent_avg_bid = sum(self.current_hand_opponent_bids) / len(
+                    self.current_hand_opponent_bids)
+            else:
+                opponent_avg_bid = 0
+
+            if opponent_avg_bid > 0:
+                ratio = opponent_hand_strength / opponent_avg_bid
+                self.opponent_ratios.append(ratio)
+
+            self.current_hand_opponent_bids = []
 
     return ReflexAgentWithMemory(name)
 
@@ -95,9 +98,7 @@ def run_experiment(agent1_factory,
     differences = []
     agent1_winnings = []
     agent2_winnings = []
-    for game_num in tqdm(range(1, num_games + 1),
-                         desc="Playing games",
-                         unit="game"):
+    for _ in tqdm(range(1, num_games + 1), desc="Playing games", unit="game"):
         # Create a new game with fresh agents
         game = PokerGame(agent1_factory=agent1_factory,
                          agent2_factory=agent2_factory,
@@ -137,7 +138,7 @@ if __name__ == "__main__":
         agent2_factory=lambda: create_reflex_agent("No Memory"),
         agent1_name="Reflex Agent (Memory)",
         agent2_name="Reflex Agent (No Memory)",
-        num_games=100000,
+        num_games=100,
         num_hands=50)
     print(f"Mean difference: {results['mean_difference']}")
     print(f"Standard deviation of difference: {results['std_difference']}")

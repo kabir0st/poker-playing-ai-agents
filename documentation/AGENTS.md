@@ -304,10 +304,12 @@ bid = (39 / 39) * 50 = $50
 
 ### Overview
 
-The Reflex Agent with Memory extends the Reflex Agent by considering opponent bidding behavior. It uses a sophisticated adjustment strategy that:
+The Reflex Agent with Memory extends the Reflex Agent by learning from opponent behavior and predicting their hand strength. It uses a sophisticated learning and adjustment strategy that:
 1. Starts with a base bid from hand strength (like Reflex Agent)
-2. Adjusts based on opponent's last bid using proportional adjustments
-3. Scales adjustments based on confidence (hand strength)
+2. Learns bid-to-hand-strength ratios from showdown observations
+3. Predicts opponent hand strength from their bids using learned ratios
+4. Adjusts bid based on comparison between own and predicted opponent hand strength
+5. Scales adjustments based on confidence (own hand strength)
 
 ### Creation
 
@@ -330,17 +332,16 @@ flowchart TD
     BaseBid --> CheckOpp{Opponent has<br/>previous bids?}
 
     CheckOpp -->|No| NoAdjust[No adjustment<br/>adjustment = 0]
-    CheckOpp -->|Yes| GetLast[Get last opponent bid]
+    CheckOpp -->|Yes| Predict[Predict opponent hand strength<br/>using learned ratios]
 
-    GetLast --> Expected[Calculate expected bid<br/>expected = 25.0]
-    Expected --> Diff[Calculate difference:<br/>diff = opponent_bid - expected]
+    Predict --> Compare[Compare hand strengths:<br/>diff = hand_score - predicted_opponent]
 
-    Diff --> Confidence[Calculate confidence:<br/>confidence = hand_score - 1 / 38]
-    Confidence --> Factor[Calculate adjustment factor:<br/>factor = diff / 25.0]
+    Compare --> Confidence[Calculate confidence:<br/>confidence = hand_score / 39.0]
+    Confidence --> Multiplier[Calculate confidence multiplier:<br/>multiplier = 0.5 + confidence]
 
-    Factor --> Multiplier[Calculate confidence multiplier:<br/>multiplier = 0.5 + confidence * 1.0]
+    Multiplier --> Normalize[Normalize difference:<br/>normalized_diff = diff / 39.0]
 
-    Multiplier --> Adjust[Calculate adjustment:<br/>adjustment = -factor * 15 * multiplier]
+    Normalize --> Adjust[Calculate adjustment:<br/>adjustment = normalized_diff * 20 * multiplier]
 
     Adjust --> Apply[Apply adjustment:<br/>bid = base_bid + adjustment]
     NoAdjust --> Apply
@@ -355,6 +356,7 @@ flowchart TD
     style End fill:#FFB6C1
     style Evaluate fill:#87CEEB
     style BaseBid fill:#FFD700
+    style Predict fill:#FFA500
     style Adjust fill:#FFA500
     style Confidence fill:#DDA0DD
 ```
@@ -363,9 +365,18 @@ flowchart TD
 
 ```python
 class ReflexAgentWithMemory(Agent):
+    def __init__(self, name):
+        super().__init__(name)
+        self.opponent_ratios = []  # Learned bid-to-hand-strength ratios
+        self.current_hand_opponent_bids = []  # Track bids for current hand
+
     def make_bid(self, phase, own_bids, opponent_bids):
         if self.hand is None:
             return 0
+
+        # Store opponent bids for learning later
+        if opponent_bids:
+            self.current_hand_opponent_bids = opponent_bids.copy()
 
         # Evaluate hand strength (score ranges from 1-39)
         hand_score = analyse_hand(self.hand)
@@ -373,32 +384,28 @@ class ReflexAgentWithMemory(Agent):
         # Base bid from hand strength (same as Reflex Agent)
         base_bid = (hand_score / 39.0) * 50
 
-        # Adjust based on opponent's last bid (if available)
+        # Adjust based on opponent's bidding behavior and predicted hand
         adjustment = 0
-        if opponent_bids:  # If opponent has bid in previous phases
-            last_opponent_bid = opponent_bids[-1]
+        if opponent_bids:  # If opponent has bid
+            # Predict opponent's hand strength from their current bids
+            # using learned bid-to-hand-strength mapping
+            predicted_opponent_hand = self._predict_opponent_hand_strength(opponent_bids)
 
-            # Calculate expected opponent bid
-            expected_opponent_bid = 25.0  # Average expected bid
-
-            # Calculate the difference between opponent bid and expected bid
-            bid_difference = last_opponent_bid - expected_opponent_bid
+            # Compare our hand strength to predicted opponent hand strength
+            hand_strength_diff = hand_score - predicted_opponent_hand
 
             # Calculate confidence based on hand strength
-            # Normalize hand strength to [0, 1] range (1-39 -> 0-1)
-            confidence = (hand_score - 1) / 38.0  # Maps 1->0, 39->1
+            confidence = hand_score / 39.0
+            confidence_multiplier = 0.5 + confidence
 
-            # Proportional adjustment based on bid difference
-            base_adjustment_factor = bid_difference / 25.0  # Normalize to [-1, 1] range
-
-            # Apply confidence multiplier: higher confidence = more aggressive adjustment
-            confidence_multiplier = 0.5 + (confidence * 1.0)  # Ranges from 0.5 to 1.5
-
-            # Calculate proportional adjustment
-            # Negative bid_difference (opponent bid low) -> positive adjustment (we bid more)
-            # Positive bid_difference (opponent bid high) -> negative adjustment (we bid less)
-            max_adjustment = 15.0  # Maximum adjustment amount
-            adjustment = -base_adjustment_factor * max_adjustment * confidence_multiplier
+            # Adjust bid based on hand strength comparison
+            # If we have stronger hand (positive diff), bid more
+            # If opponent has stronger hand (negative diff), bid less
+            # Scale adjustment by hand strength difference and confidence
+            # Normalize difference to [-1, 1] range (max diff is ±38)
+            normalized_diff = hand_strength_diff / 39.0
+            max_adjustment = 20.0  # Maximum adjustment amount
+            adjustment = normalized_diff * max_adjustment * confidence_multiplier
 
         # Apply adjustment
         bid = base_bid + adjustment
@@ -407,11 +414,37 @@ class ReflexAgentWithMemory(Agent):
         bid = max(0, min(50, int(bid)))
 
         return bid
+
+    def _predict_opponent_hand_strength(self, opponent_bids):
+        """Predict opponent hand strength from their bids using learned ratios."""
+        if not self.opponent_ratios or not opponent_bids:
+            return 25.0  # Default prediction if no learning data
+
+        current_avg_bid = sum(opponent_bids) / len(opponent_bids)
+        avg_ratio = sum(self.opponent_ratios) / len(self.opponent_ratios)
+        predicted_hand = current_avg_bid * avg_ratio
+        predicted_hand = max(1.0, min(39.0, predicted_hand))
+        return predicted_hand
+
+    def observe_showdown(self, opponent_hand):
+        """Learn bid-to-hand-strength ratio from showdown."""
+        opponent_hand_strength = analyse_hand(opponent_hand)
+        if self.current_hand_opponent_bids:
+            opponent_avg_bid = sum(self.current_hand_opponent_bids) / len(
+                self.current_hand_opponent_bids)
+        else:
+            opponent_avg_bid = 0
+
+        if opponent_avg_bid > 0:
+            ratio = opponent_hand_strength / opponent_avg_bid
+            self.opponent_ratios.append(ratio)
+
+        self.current_hand_opponent_bids = []  # Reset for next hand
 ```
 
-### Adjustment Strategy
+### Learning and Adjustment Strategy
 
-The agent uses a **sophisticated proportional adjustment strategy**:
+The agent uses a **sophisticated learning and prediction strategy**:
 
 #### 1. Base Bid Calculation
 ```
@@ -419,111 +452,140 @@ base_bid = (hand_score / 39) × 50
 ```
 Same as Reflex Agent - proportional to hand strength.
 
-#### 2. Expected Opponent Bid
+#### 2. Learning Mechanism (in `observe_showdown()`)
+After each hand, the agent learns:
 ```
-expected_opponent_bid = 25.0
+ratio = opponent_hand_strength / opponent_avg_bid
+opponent_ratios.append(ratio)
 ```
-Based on average hand strength (~20) → average bid (~$25).
+This ratio represents how much hand strength the opponent gets per dollar bid.
 
-#### 3. Bid Difference
+#### 3. Prediction (in `_predict_opponent_hand_strength()`)
 ```
-bid_difference = opponent_bid - expected_opponent_bid
+current_avg_bid = sum(opponent_bids) / len(opponent_bids)
+avg_ratio = sum(opponent_ratios) / len(opponent_ratios)
+predicted_hand = current_avg_bid × avg_ratio
 ```
-- **Positive**: Opponent bid higher than expected (might have strong hand)
-- **Negative**: Opponent bid lower than expected (might have weak hand)
+Uses learned ratios to predict opponent hand strength from their bids.
 
-#### 4. Confidence Calculation
+#### 4. Hand Strength Comparison
 ```
-confidence = (hand_score - 1) / 38.0
+hand_strength_diff = hand_score - predicted_opponent_hand
 ```
-- **Weak hand** (score 1): confidence = 0.0
-- **Medium hand** (score 20): confidence = 0.5
+- **Positive**: We have stronger hand → should bid more
+- **Negative**: Opponent has stronger hand → should bid less
+
+#### 5. Confidence Calculation
+```
+confidence = hand_score / 39.0
+```
+- **Weak hand** (score 1): confidence = 0.026
+- **Medium hand** (score 20): confidence = 0.513
 - **Strong hand** (score 39): confidence = 1.0
 
-#### 5. Confidence Multiplier
+#### 6. Confidence Multiplier
 ```
-confidence_multiplier = 0.5 + (confidence × 1.0)
+confidence_multiplier = 0.5 + confidence
 ```
-- **Weak hand**: multiplier = 0.5 (cautious adjustments)
+- **Weak hand**: multiplier = 0.526 (cautious adjustments)
+- **Medium hand**: multiplier = 1.013 (moderate adjustments)
 - **Strong hand**: multiplier = 1.5 (aggressive adjustments)
 
-#### 6. Adjustment Calculation
+#### 7. Adjustment Calculation
 ```
-adjustment = -(bid_difference / 25.0) × max_adjustment × confidence_multiplier
+normalized_diff = hand_strength_diff / 39.0
+adjustment = normalized_diff × max_adjustment × confidence_multiplier
 ```
-Where `max_adjustment = 15.0`
+Where `max_adjustment = 20.0`
 
 **Adjustment Logic**:
-- If opponent bid **low** (below $25): **positive adjustment** → bid more aggressively
-- If opponent bid **high** (above $25): **negative adjustment** → bid more cautiously
+- If predicted opponent is **weaker**: **positive adjustment** → bid more aggressively
+- If predicted opponent is **stronger**: **negative adjustment** → bid more cautiously
 - Adjustment magnitude scales with:
-  - How much opponent deviates from expected ($25)
+  - Hand strength difference (normalized to [-1, 1])
   - Own hand strength confidence
 
 ### Example Calculations
 
-#### Example 1: Strong Hand, Opponent Bid Low
+#### Example 1: Strong Hand, Predicted Weak Opponent
 ```
 hand_score = 35 (strong hand)
 base_bid = (35 / 39) × 50 = $45
-opponent_bid = $15 (low bid)
-expected = $25
-bid_difference = 15 - 25 = -10
-confidence = (35 - 1) / 38 = 0.89
-confidence_multiplier = 0.5 + (0.89 × 1.0) = 1.39
-adjustment = -(-10 / 25) × 15 × 1.39 = +8.34
-final_bid = 45 + 8.34 = $53 → clamped to $50
+opponent_bids = [15, 18, 20] (low bids)
+current_avg_bid = (15 + 18 + 20) / 3 = $17.67
+avg_ratio = 1.2 (learned from past games)
+predicted_opponent_hand = 17.67 × 1.2 = 21.2
+hand_strength_diff = 35 - 21.2 = +13.8 (we're stronger)
+confidence = 35 / 39 = 0.897
+confidence_multiplier = 0.5 + 0.897 = 1.397
+normalized_diff = 13.8 / 39 = 0.354
+adjustment = 0.354 × 20 × 1.397 = +9.89
+final_bid = 45 + 9.89 = $54.89 → clamped to $50
 ```
 
-#### Example 2: Weak Hand, Opponent Bid High
+#### Example 2: Weak Hand, Predicted Strong Opponent
 ```
 hand_score = 8 (weak hand)
 base_bid = (8 / 39) × 50 = $10
-opponent_bid = $40 (high bid)
-expected = $25
-bid_difference = 40 - 25 = +15
-confidence = (8 - 1) / 38 = 0.18
-confidence_multiplier = 0.5 + (0.18 × 1.0) = 0.68
-adjustment = -(15 / 25) × 15 × 0.68 = -6.12
-final_bid = 10 - 6.12 = $4
+opponent_bids = [35, 40, 38] (high bids)
+current_avg_bid = (35 + 40 + 38) / 3 = $37.67
+avg_ratio = 1.2 (learned from past games)
+predicted_opponent_hand = 37.67 × 1.2 = 45.2 → clamped to 39 (max)
+hand_strength_diff = 8 - 39 = -31 (opponent is stronger)
+confidence = 8 / 39 = 0.205
+confidence_multiplier = 0.5 + 0.205 = 0.705
+normalized_diff = -31 / 39 = -0.795
+adjustment = -0.795 × 20 × 0.705 = -11.21
+final_bid = 10 - 11.21 = -$1.21 → clamped to $0
 ```
 
-#### Example 3: Medium Hand, Opponent Bid Average
+#### Example 3: Medium Hand, Predicted Similar Opponent
 ```
 hand_score = 20 (medium hand)
 base_bid = (20 / 39) × 50 = $26
-opponent_bid = $25 (average bid)
-expected = $25
-bid_difference = 25 - 25 = 0
-adjustment = 0
-final_bid = $26
+opponent_bids = [25, 28, 27] (average bids)
+current_avg_bid = (25 + 28 + 27) / 3 = $26.67
+avg_ratio = 1.0 (learned from past games)
+predicted_opponent_hand = 26.67 × 1.0 = 26.67
+hand_strength_diff = 20 - 26.67 = -6.67 (slightly weaker)
+confidence = 20 / 39 = 0.513
+confidence_multiplier = 0.5 + 0.513 = 1.013
+normalized_diff = -6.67 / 39 = -0.171
+adjustment = -0.171 × 20 × 1.013 = -3.46
+final_bid = 26 - 3.46 = $23
 ```
 
 ### Characteristics
 
-- **Information Used**: Own hand strength + opponent's last bid
+- **Information Used**: Own hand strength + opponent bids + learned ratios from past games
 - **Bid Range**: $0-$50 (base bid + adjustment)
-- **Adjustment Range**: ±$15 (scaled by confidence)
-- **Predictability**: Adaptive based on opponent behavior
-- **Use Case**: Demonstrates value of opponent observation
+- **Adjustment Range**: ±$20 (scaled by confidence and hand strength difference)
+- **Learning**: Improves predictions over time through showdown observations
+- **Predictability**: Adaptive based on opponent behavior and learned patterns
+- **Use Case**: Demonstrates value of opponent observation and learning
 
 ### Decision Factors
 
 | Factor | Considered? | Impact |
 |--------|------------|--------|
 | Hand strength | ✅ Yes | Primary factor - determines base bid and confidence |
-| Opponent bids | ✅ Yes | Secondary factor - determines adjustment |
-| Phase number | ❌ No | None (only uses last opponent bid) |
+| Opponent bids | ✅ Yes | Used to predict opponent hand strength |
+| Learned ratios | ✅ Yes | Used to convert opponent bids to predicted hand strength |
+| Phase number | ❌ No | Uses average bid across all phases |
 | Own previous bids | ❌ No | None |
 | Confidence | ✅ Yes | Scales adjustment aggressiveness |
+| Predicted opponent strength | ✅ Yes | Determines adjustment direction and magnitude |
 
 ### Key Features
 
-1. **Proportional Adjustments**: Adjustment scales with how much opponent deviates from expected bid
-2. **Confidence-Based Scaling**: Stronger hands adjust more aggressively
-3. **Bidirectional Logic**:
-   - Low opponent bid → increase bid (capitalize on weakness)
-   - High opponent bid → decrease bid (avoid overcommitting)
+1. **Learning Mechanism**: Learns bid-to-hand-strength ratios from showdown observations
+2. **Prediction**: Predicts opponent hand strength from their bids using learned ratios
+3. **Proportional Adjustments**: Adjustment scales with hand strength difference
+4. **Confidence-Based Scaling**: Stronger hands adjust more aggressively
+5. **Bidirectional Logic**:
+   - Predicted weaker opponent → increase bid (capitalize on weakness)
+   - Predicted stronger opponent → decrease bid (avoid overcommitting)
+6. **Improves Over Time**: Predictions become more accurate as more data is collected
 
 ---
 

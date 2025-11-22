@@ -215,23 +215,32 @@ def make_bid(self, phase, own_bids, opponent_bids):
 
 ### 4. Reflex Agent with Memory (`lab_2f.py`)
 
-**Strategy**: Hand strength + opponent behavior analysis
+**Strategy**: Hand strength + opponent learning and prediction
 - Base bid from hand strength (same as reflex agent)
-- Adjusts bid based on opponent's last bid:
-  - Opponent bid > $30: Reduce bid by $5 (cautious - opponent might be strong)
-  - Opponent bid < $20: Increase bid by $5 (aggressive - opponent might be weak)
-  - Opponent bid $20-$30: No adjustment (neutral)
+- Learns bid-to-hand-strength ratios from showdown observations
+- Predicts opponent hand strength from their current bids using learned ratios
+- Adjusts bid based on comparison between own hand strength and predicted opponent hand strength
+- Uses confidence multiplier based on own hand strength
+
+**Learning Mechanism**:
+- After each showdown, calculates ratio: `opponent_hand_strength / opponent_avg_bid`
+- Stores ratios in `opponent_ratios` list
+- Uses average ratio to predict opponent hand strength from bids
+
+**Prediction and Adjustment**:
+- Predicts opponent hand: `predicted_hand = avg_bid × avg_ratio`
+- Compares own hand strength vs predicted opponent hand strength
+- Adjusts bid proportionally to the difference, scaled by confidence
+- Stronger own hand → more confident adjustments
+- If predicted opponent is stronger → reduce bid
+- If predicted opponent is weaker → increase bid
 
 **Advantages**:
-- Uses both own hand strength AND opponent signals
+- Uses both own hand strength AND opponent observation
+- Learns from past games to improve predictions
 - More adaptive than simple reflex agent
 - Can avoid overcommitting against strong opponents
 - Can capitalize on weak opponents
-
-**Limitations**:
-- Simple adjustment strategy (+$5/-$5)
-- Only considers last bid, not bidding pattern
-- Fixed thresholds may not be optimal
 
 **Code**:
 ```python
@@ -239,15 +248,28 @@ def make_bid(self, phase, own_bids, opponent_bids):
     base_bid = (hand_score / 39.0) * 50
 
     if opponent_bids:
-        last_opponent_bid = opponent_bids[-1]
-        if last_opponent_bid > 30:
-            adjustment = -5  # Cautious
-        elif last_opponent_bid < 20:
-            adjustment = +5  # Aggressive
-        else:
-            adjustment = 0
+        # Predict opponent hand strength from bids
+        predicted_opponent_hand = self._predict_opponent_hand_strength(opponent_bids)
+
+        # Compare hand strengths
+        hand_strength_diff = hand_score - predicted_opponent_hand
+
+        # Confidence based on own hand strength
+        confidence = hand_score / 39.0
+        confidence_multiplier = 0.5 + confidence
+
+        # Proportional adjustment
+        normalized_diff = hand_strength_diff / 39.0
+        adjustment = normalized_diff * 20.0 * confidence_multiplier
 
     return max(0, min(50, int(base_bid + adjustment)))
+
+def observe_showdown(self, opponent_hand):
+    # Learn bid-to-hand-strength ratio
+    opponent_hand_strength = analyse_hand(opponent_hand)
+    opponent_avg_bid = sum(self.current_hand_opponent_bids) / len(...)
+    ratio = opponent_hand_strength / opponent_avg_bid
+    self.opponent_ratios.append(ratio)
 ```
 
 ---
@@ -320,40 +342,19 @@ def make_bid(self, phase, own_bids, opponent_bids):
 
 ### Visualization Plots
 
-The experiments generate six types of plots:
+The experiments generate two types of plots:
 
-#### 1. Bankroll Differences Histogram
-- Shows distribution of differences across games
-- Includes mean and standard deviation lines
-- Helps identify if differences are normally distributed
+#### 1. Win Rate Analysis
+- Shows number of games won by each agent
+- Displays win rates as percentages
+- Includes tie counts and rates
+- Complements mean difference analysis
 
-#### 2. Winnings Comparison Box Plot
-- Compares distributions of winnings per game
-- Shows median, quartiles, and outliers
-- Visual comparison of performance variability
-
-#### 3. Cumulative Differences Line Plot
-- Shows how cumulative difference evolves over games
+#### 2. Cumulative Winnings After X Games
+- Shows cumulative winnings for both agents across all games
+- Plots raw data for every game
 - Helps identify trends and consistency
 - Steep upward slope = consistent advantage
-
-#### 4. Winnings Over Games Line Plot
-- Plots winnings of both agents for each game
-- Shows performance over time
-- Helps identify if one agent improves/declines
-
-#### 5. Statistics Summary Bar Chart
-- Side-by-side comparison of:
-  - Average winnings per game
-  - Mean difference
-  - Standard deviation
-- Quick visual summary of key metrics
-
-#### 6. Win Rate Analysis Bar Chart
-- Shows:
-  - Number of games won by each agent
-  - Win rates as percentages
-- Complements mean difference analysis
 
 ---
 
@@ -371,9 +372,9 @@ python src/lab_2d.py
 ```bash
 python src/lab_2e.py
 ```
-- Experiment 1: Reflex Agent vs Random Agent
-- Experiment 2: Reflex Agent vs Fixed Agent
-- Generates 12 plots in `plots/` directory
+- Experiment 1: Reflex Agent vs Random Agent (plots: `lab_2e_*`)
+- Experiment 2: Reflex Agent vs Fixed Agent (plots: `lab_2e_e2_*`)
+- Generates 4 plots total (2 per experiment) in `plots/` directory
 - Demonstrates reflex agent behavior
 
 ### Lab 2f: Memory Agent Comparison
@@ -381,14 +382,14 @@ python src/lab_2e.py
 python src/lab_2f.py
 ```
 - Compares Reflex Agent with Memory vs without Memory
-- Generates 6 plots in `plots/` directory
-- Analyzes effectiveness of memory/opponent observation
+- Generates 2 plots in `plots/` directory (prefix: `lab_2f_reflex_memory_vs_no_memory_*`)
+- Analyzes effectiveness of memory/opponent observation and learning
 
 ### Viewing Plots
 All plots are saved as PNG files in the `plots/` directory:
 - High resolution (300 DPI)
-- Descriptive filenames
-- See `plots/README.md` for detailed plot descriptions
+- Descriptive filenames with experiment prefixes
+- Two plot types per experiment: win rate analysis and cumulative winnings
 
 ---
 
@@ -401,22 +402,30 @@ All plots are saved as PNG files in the `plots/` directory:
 
 ### Memory Agent Performance
 - **vs Reflex Agent (No Memory)**: Small but consistent advantage (~$60-100 per game)
-- **Conclusion**: Opponent observation provides additional value, but the simple adjustment strategy has limited impact
+- **Conclusion**: Learning opponent patterns and predicting hand strength provides additional value
 
 ### Why Memory Helps
-1. Opponent bids correlate with their hand strength (since they also use hand-based bidding)
-2. Adjusting based on opponent signals allows:
-   - Avoiding overcommitting against strong opponents
-   - Capitalizing on weak opponents
-3. Creates more adaptive, context-aware strategy
+1. **Learning Mechanism**: The agent learns bid-to-hand-strength ratios from showdown observations
+2. **Prediction**: Uses learned ratios to predict opponent hand strength from their bids
+3. **Adaptive Adjustments**: Adjusts bids based on predicted hand strength comparison:
+   - If predicted opponent is stronger → reduce bid (avoid overcommitting)
+   - If predicted opponent is weaker → increase bid (capitalize on weakness)
+4. **Confidence Scaling**: Stronger own hands make more confident adjustments
+5. Creates more adaptive, context-aware strategy that improves over time
+
+### Current Implementation Features
+1. **Learning from showdown**: Uses `observe_showdown()` to learn bid-to-hand-strength ratios
+2. **Proportional adjustments**: Adjustments scale with hand strength difference and confidence
+3. **Multi-phase analysis**: Uses average bid across all phases for prediction
+4. **Hand strength comparison**: Compares own hand vs predicted opponent strength
+5. **Confidence-based scaling**: Stronger hands adjust more aggressively
 
 ### Potential Improvements
-1. **Proportional adjustments**: Scale adjustments based on bid amount difference
-2. **Multi-phase analysis**: Track bidding trends across all phases
-3. **Hand strength comparison**: Compare own hand vs inferred opponent strength
-4. **Learning from showdown**: Use `observe_showdown()` to calibrate adjustments
-5. **Pot odds**: Consider pot size in decision-making
-6. **Adaptive thresholds**: Dynamic thresholds based on opponent patterns
+1. **Weighted learning**: Give more weight to recent observations
+2. **Phase-specific ratios**: Learn different ratios for different bidding phases
+3. **Pot odds**: Consider pot size in decision-making
+4. **Bluff detection**: Identify when opponent bids don't match predicted strength
+5. **Adaptive learning rate**: Adjust learning speed based on prediction accuracy
 
 ---
 

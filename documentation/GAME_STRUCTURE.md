@@ -101,13 +101,14 @@ Each hand consists of exactly 3 phases:
 **Structure**: 3 sequential bidding phases
 
 **Each Bidding Phase**:
-1. Agent 1 makes a bid ($0-$50)
-2. Agent 2 makes a bid ($0-$50)
-3. Both bids are added to the pot
-4. Agents can see:
+1. Bidding order alternates each hand (randomly determined at start, then alternates)
+   - If Agent 1 bids first: Agent 1 bids, then Agent 2 bids (sees Agent 1's bid)
+   - If Agent 2 bids first: Agent 2 bids, then Agent 1 bids (sees Agent 2's bid)
+2. Both bids are added to the pot
+3. Agents can see:
    - Their own hand
    - Their own previous bids in this hand
-   - Opponent's previous bids in this hand
+   - Opponent's previous bids in this hand (including current phase if opponent bid first)
 
 **Bidding Constraints**:
 - Minimum bid: $0
