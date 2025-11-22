@@ -329,14 +329,20 @@ def observe_showdown(self, opponent_hand):
 #### 5. Win Rate
 **Definition**: Percentage of games won by each agent
 
+**Important**: A "win" means having **more total winnings after 50 hands**, not winning individual hands. Each game consists of 50 hands, and the agent with higher cumulative winnings at the end wins the game.
+
 **Calculation**:
 - Agent 1 wins: `count(differences > 0) / total_games × 100%`
 - Agent 2 wins: `count(differences < 0) / total_games × 100%`
 - Ties: `count(differences == 0) / total_games × 100%`
 
+Where `difference = agent1_winnings - agent2_winnings` after 50 hands.
+
 **Interpretation**:
-- Higher win rate = more consistent winner
+- Higher win rate = more consistent winner across games
+- Win rate shows consistency, while mean difference shows magnitude
 - Can differ from mean difference if wins/losses vary in magnitude
+- Example: An agent might win 60% of games but have a large mean difference if losses are small and wins are large
 
 ---
 
@@ -345,10 +351,11 @@ def observe_showdown(self, opponent_hand):
 The experiments generate two types of plots:
 
 #### 1. Win Rate Analysis
-- Shows number of games won by each agent
+- Shows number of games won by each agent (where a "win" = more total winnings after 50 hands)
 - Displays win rates as percentages
 - Includes tie counts and rates
-- Complements mean difference analysis
+- Two side-by-side charts: win counts (left) and win rates (right)
+- Complements mean difference analysis by showing consistency
 
 #### 2. Cumulative Winnings After X Games
 - Shows cumulative winnings for both agents across all games
